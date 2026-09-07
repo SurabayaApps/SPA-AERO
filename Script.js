@@ -1,5 +1,5 @@
 async function kirimDataKeSheet(nama, harga) {
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbztCyJt90s6IRxgjEUN0frUAQC6DzLtWCfGNvcGOpA1XFYw5EEz8gz2IRFfYAiijfd7Ew/exec";
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw_rJiZvUckSHGdssR7darIjcTMlsTuDOYGcRVA56bcXu4KBTjHrcQLjoZ1UvB5rXx1qQ/exec";
   
   const dataBaru = {
     sheetName: "Transactions",
