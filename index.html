@@ -1,0 +1,1492 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AERO SPA - POS & Back Office Management System</title>
+    <!-- Library jsPDF untuk generate PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --primary: #276749;       /* Hijau Daun Utama */
+            --primary-light: #38a169; /* Hijau Daun Terang */
+            --accent: #68d391;        /* Aksen Daun Hijau Segar */
+            --bg-main: #f0fff4;       /* Background Hijau Sangat Muda */
+            --card-bg: #ffffff;
+            --text-main: #2d3748;
+            --text-muted: #718096;
+            --border: #e2e8f0;
+            --success: #38a169;
+            --danger: #e53e3e;
+            --warning: #dd6b20;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); height: 100vh; overflow-x: hidden; }
+        
+        /* LOGIN PAGE STYLE */
+        #login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        }
+        .login-card {
+            background: white;
+            padding: 30px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-card h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.4rem;
+        }
+        .login-card .form-group {
+            margin-bottom: 15px;
+        }
+        .login-card label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .login-card input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 11px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .login-btn:hover {
+            background-color: var(--primary-light);
+        }
+
+        /* MAIN APP LAYOUT */
+        #app-container {
+            display: none;
+            height: 100vh;
+            display: flex;
+            position: relative;
+        }
+        aside { 
+            width: 260px; 
+            background-color: var(--primary); 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            border-right: 1px solid rgba(255,255,255,0.1); 
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        .brand { padding: 20px; font-size: 1.1rem; font-weight: bold; background-color: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.1); color: #c6f6d5; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
+        .nav-links { list-style: none; padding: 15px 0; flex-grow: 1; overflow-y: auto; }
+        .nav-links li { padding: 12px 20px; cursor: pointer; transition: all 0.3s; font-size: 0.95rem; display: flex; align-items: center; gap: 10px; }
+        .nav-links li:hover, .nav-links li.active { background-color: var(--primary-light); border-left: 4px solid var(--accent); }
+        .logout-btn { background: rgba(229, 62, 62, 0.2); color: #feb2b2; border-top: 1px solid rgba(255,255,255,0.1); }
+        .logout-btn:hover { background: var(--danger) !important; color: white; }
+
+        main { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; width: 100%; }
+        header { height: 60px; background-color: var(--card-bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 15px; flex-shrink: 0; gap: 10px; }
+        header h1 { font-size: 1rem; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+        .user-info { font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 10px; }
+        .live-clock { background: #f0fff4; padding: 4px 8px; border-radius: 4px; font-weight: 600; color: var(--primary); border: 1px solid var(--border); font-size: 0.75rem; white-space: nowrap; }
+        
+        .menu-toggle { display: none; background: none; border: none; font-size: 1.4rem; color: var(--primary); cursor: pointer; padding: 4px; }
+
+        .content-body { flex-grow: 1; overflow-y: auto; padding: 15px; display: none; }
+        .content-body.active { display: block; }
+        
+        .grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+        .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); margin-bottom: 15px; }
+        .card h3 { font-size: 0.95rem; color: var(--primary); margin-bottom: 12px; border-bottom: 2px solid var(--border); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        
+        .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; border-left: 4px solid var(--primary-light); }
+        .stat-card.success { border-left-color: var(--success); }
+        .stat-card.accent { border-left-color: var(--accent); }
+        .stat-card.danger { border-left-color: var(--danger); }
+        .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; }
+        .stat-value { font-size: 1.15rem; font-weight: bold; color: var(--primary); word-break: break-word; }
+        
+        .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .item-box { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 10px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; transition: 0.2s; }
+        .item-box:hover { border-color: var(--primary-light); background: #f0fff4; }
+        .item-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; color: var(--primary); }
+        .item-price { color: var(--success); font-weight: bold; font-size: 0.85rem; margin-bottom: 8px; }
+        .item-action { display: flex; align-items: center; gap: 5px; justify-content: center; }
+        .item-action input { width: 45px; text-align: center; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.85rem; }
+        
+        /* Tombol Diskon Rentang 1%-50% */
+        .discount-container { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-bottom: 8px; }
+        .btn-disc { background: #e2e8f0; color: var(--text-main); border: none; padding: 8px 2px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s; text-align: center; }
+        .btn-disc:hover, .btn-disc.active { background-color: var(--warning); color: white; }
+
+        /* Responsive Tables */
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 5px; min-width: 500px; }
+        th, td { padding: 10px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+        th { background-color: #f0fff4; color: var(--primary); font-weight: 600; }
+        
+        .btn { background-color: var(--primary-light); color: white; border: none; padding: 10px 14px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; touch-action: manipulation; }
+        .btn:hover { background-color: var(--primary); }
+        .btn-success { background-color: var(--success); }
+        .btn-danger { background-color: var(--danger); }
+        .btn-warning { background-color: var(--warning); color: white; }
+        .btn-sm { padding: 6px 10px; font-size: 0.75rem; }
+        
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; }
+        .form-group select, .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem; background: #fff; }
+        
+        .filter-container { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .filter-container select, .filter-container input { padding: 6px 8px; border-radius: 4px; border: 1px solid var(--border); font-size: 0.8rem; background: #fff; }
+        
+        .badge-in { background: #c6f6d5; color: #22543d; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .badge-out { background: #fed7d7; color: #742a2a; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .badge-void { background: #feebc8; color: #744210; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        
+        /* Report Card Styling */
+        .report-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .report-box { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; border-left: 4px solid var(--primary); }
+        .report-box h4 { color: var(--primary); margin-bottom: 8px; font-size: 0.95rem; }
+        .report-box p { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px; }
+
+        /* MOBILE RESPONSIVE MEDIA QUERIES (Drawer & Single Column Layout) */
+        @media (max-width: 900px) {
+            aside {
+                position: fixed;
+                top: 0;
+                left: -260px;
+                height: 100%;
+                box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            }
+            aside.mobile-open {
+                left: 0;
+            }
+            .menu-toggle {
+                display: block;
+            }
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            .grid-3 {
+                grid-template-columns: 1fr;
+            }
+            .report-card-grid {
+                grid-template-columns: 1fr;
+            }
+            header h1 {
+                font-size: 0.9rem;
+            }
+            .user-info span {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .content-body {
+                padding: 10px;
+            }
+            .card {
+                padding: 10px;
+            }
+            .discount-container {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HALAMAN LOGIN -->
+    <div id="login-container">
+        <div class="login-card">
+            <h2>AERO SPA SYSTEM</h2>
+            <div class="form-group">
+                <label>Username:</label>
+                <input type="text" id="username-input" placeholder="Masukkan username">
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" id="password-input" placeholder="Masukkan password">
+            </div>
+            <button class="login-btn" onclick="handleLogin()">Login ke Sistem</button>
+        </div>
+    </div>
+
+    <!-- HALAMAN UTAMA APLIKASI -->
+    <div id="app-container" style="display: none; width: 100%;">
+        <aside id="sidebar-nav">
+            <div class="brand">
+                <span>AERO SPA SYSTEM</span>
+                <span style="cursor:pointer; font-size:1.2rem; padding: 5px;" onclick="toggleSidebar()">✕</span>
+            </div>
+            <ul class="nav-links">
+                <li id="menu-pos" class="active" onclick="switchTab('pos', this)">🖥️ Kasir POS & Transaksi</li>
+                <li id="menu-attendance" class="nav-therapist-allowed" onclick="switchTab('attendance', this)">🕒 Absensi Kehadiran</li>
+                <li id="menu-catalog" class="nav-owner-only" onclick="switchTab('catalog', this)">📋 Manajemen Katalog SPA & Harga</li>
+                <li id="menu-partners" class="nav-owner-only" onclick="switchTab('partners', this)">🤝 Manajemen Mitra (Terapis & Hotel)</li>
+                <li id="menu-backoffice" class="nav-owner-only" onclick="switchTab('backoffice', this)">📋 Back Office & Operasional</li>
+                <li id="menu-reports" class="nav-owner-only" onclick="switchTab('reports', this)">📑 Download Report (PDF)</li>
+                <li id="menu-pnl" class="nav-owner-only" onclick="switchTab('pnl', this)">📊 Profit & Loss Dashboard</li>
+                <li id="menu-settings" class="nav-owner-only" onclick="switchTab('settings', this)">⚙️ Pengaturan Sistem & User</li>
+                <li class="logout-btn" onclick="handleLogout()">🚪 Keluar (Logout)</li>
+            </ul>
+        </aside>
+        <main>
+            <header>
+                <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                    <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+                    <h1 id="page-title">Sistem Kasir POS</h1>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="live-clock" id="live-clock-display">00:00:00 WIB</div>
+                        <span id="current-user-badge">Role: Owner</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- TAB 1: POS SYSTEM -->
+            <div id="pos" class="content-body active">
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Katalog Layanan AERO SPA (Input Qty)</h3>
+                        <div class="catalog-grid" id="pos-catalog-container"></div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Keranjang Transaksi & Kasir</h3>
+                        <div class="form-group">
+                            <label>Pilih Hotel Mitra:</label>
+                            <select id="hotel-partner"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tugaskan ke Terapis:</label>
+                            <select id="assigned-therapist"></select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Nama Tamu:</label>
+                            <input type="text" id="guest-name" placeholder="Masukkan nama tamu">
+                        </div>
+                        <div class="form-group">
+                            <label>Nomor Kamar:</label>
+                            <input type="text" id="room-number" placeholder="Contoh: 504 / Walk-in">
+                        </div>
+                        <div class="form-group">
+                            <label>Nomor WhatsApp Customer (Input Manual):</label>
+                            <input type="text" id="customer-whatsapp" placeholder="Contoh: 6281234567890">
+                        </div>
+                        <div class="form-group">
+                            <label>Catatan / Permintaan Khusus:</label>
+                            <textarea id="order-notes" rows="2" placeholder="Misal: Tekanan pijat kuat, alergi oil tertentu..."></textarea>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 8px;">
+                            <label>Pilih Diskon Transaksi (1% - 50%):</label>
+                            <div class="discount-container">
+                                <button type="button" class="btn-disc active" id="disc-0" onclick="setDiscount(0, this)">0%</button>
+                                <button type="button" class="btn-disc" id="disc-5" onclick="setDiscount(5, this)">5%</button>
+                                <button type="button" class="btn-disc" id="disc-10" onclick="setDiscount(10, this)">10%</button>
+                                <button type="button" class="btn-disc" id="disc-15" onclick="setDiscount(15, this)">15%</button>
+                                <button type="button" class="btn-disc" id="disc-20" onclick="setDiscount(20, this)">20%</button>
+                                <button type="button" class="btn-disc" id="disc-25" onclick="setDiscount(25, this)">25%</button>
+                                <button type="button" class="btn-disc" id="disc-30" onclick="setDiscount(30, this)">30%</button>
+                                <button type="button" class="btn-disc" id="disc-35" onclick="setDiscount(35, this)">35%</button>
+                                <button type="button" class="btn-disc" id="disc-40" onclick="setDiscount(40, this)">40%</button>
+                                <button type="button" class="btn-disc" id="disc-45" onclick="setDiscount(45, this)">45%</button>
+                                <button type="button" class="btn-disc" id="disc-50" onclick="setDiscount(50, this)">50%</button>
+                            </div>
+                            <div style="display: flex; gap: 5px; align-items: center; margin-top: 4px;">
+                                <input type="number" id="custom-disc-input" min="1" max="50" placeholder="Atau ketik % (1-50)" style="font-size: 0.8rem; padding: 8px;" oninput="applyCustomDiscount(this.value)">
+                                <span style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;">Rentang 1% - 50%</span>
+                            </div>
+                        </div>
+
+                        <div id="cart-summary" style="font-size: 0.85rem; margin-bottom: 15px; background: #f0fff4; padding: 10px; border-radius: 4px;">
+                            <p style="color: #718096;">Belum ada layanan dipilih.</p>
+                        </div>
+                        <button class="btn btn-success" style="width: 100%; margin-bottom: 10px; padding: 12px;" onclick="processTransaction()">Proses Pembayaran & Catat Sistem</button>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <button class="btn" style="background-color: var(--primary); font-size: 0.8rem;" onclick="downloadLastBillPDF()">📥 Download Bill PDF</button>
+                            <button class="btn" style="background-color: #25D366; font-size: 0.8rem;" onclick="sendBillToWhatsApp()">💬 Send to WA</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: ABSENSI KEHADIRAN -->
+            <div id="attendance" class="content-body">
+                <div class="card" style="border-left: 4px solid var(--primary-light); max-width: 800px; margin: 0 auto;">
+                    <h3><span>🕒 Menu Absensi Kehadiran Terapis</span></h3>
+                    
+                    <div style="background: #f0fff4; padding: 15px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 15px;">
+                        <div class="form-group">
+                            <label>Pilih Nama Terapis:</label>
+                            <select id="attendance-therapist"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Pilih Lokasi Hotel Tempat Bertugas:</label>
+                            <select id="attendance-hotel"></select>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                            <button class="btn btn-success" style="width: 100%; padding: 12px; font-size: 0.95rem;" onclick="recordAttendance('IN')">Clock In (Masuk)</button>
+                            <button class="btn btn-danger" style="width: 100%; padding: 12px; font-size: 0.95rem;" onclick="recordAttendance('OUT')">Clock Out (Pulang)</button>
+                        </div>
+                    </div>
+
+                    <div style="background: #fff; padding: 12px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 0.8rem; color: var(--text-muted);">Bulan:</label>
+                            <select id="filter-attendance-month" onchange="filterAttendanceData()">
+                                <option value="all">Semua Bulan</option>
+                                <option value="2026-06" selected>Juni 2026</option>
+                                <option value="2026-05">Mei 2026</option>
+                            </select>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-size: 0.8rem; color: var(--text-muted);">Dari Tanggal:</label>
+                                <input type="date" id="filter-date-start" onchange="filterAttendanceData()">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-size: 0.8rem; color: var(--text-muted);">Sampai Tanggal:</label>
+                                <input type="date" id="filter-date-end" onchange="filterAttendanceData()">
+                            </div>
+                        </div>
+                        <button class="btn btn-sm" style="background-color: var(--text-muted); align-self: flex-start;" onclick="resetAttendanceFilter()">Reset Filter</button>
+                    </div>
+
+                    <h4 style="font-size: 0.9rem; color: var(--primary); margin-bottom: 8px;">Riwayat Log Kehadiran:</h4>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Terapis</th>
+                                    <th>Status</th>
+                                    <th>Waktu Timestamp</th>
+                                    <th>Hotel Mitra</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendance-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: MANAJEMEN KATALOG SPA & HARGA -->
+            <div id="catalog" class="content-body">
+                <div class="card" style="border-left: 4px solid var(--primary);">
+                    <h3>📋 Tambah / Daftarkan Layanan SPA Baru</h3>
+                    <div style="background: #f0fff4; padding: 12px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 15px;">
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Nama Layanan SPA:</label>
+                                <input type="text" id="new-spa-name" placeholder="Misal: Reflexology 60 Mins">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Harga (IDR - Inclusive PPN 11%):</label>
+                                <input type="number" id="new-spa-price" placeholder="Contoh: 395000">
+                            </div>
+                        </div>
+                        <button class="btn btn-success" style="width: 100%; margin-top: 12px;" onclick="addSpaCatalogItem()">Tambah ke Katalog SPA</button>
+                    </div>
+
+                    <h4 style="font-size: 0.85rem; color: var(--primary); margin-bottom: 8px;">Daftar Menu SPA & Harga Saat Ini:</h4>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nama Layanan SPA</th>
+                                    <th>Harga (Inclusive PPN 11%)</th>
+                                    <th>Aksi (Ubah Harga / Hapus)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="catalog-management-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: MANAJEMEN MITRA -->
+            <div id="partners" class="content-body">
+                <div class="grid-2">
+                    <div class="card" style="border-left: 4px solid var(--primary);">
+                        <h3>👤 Pendaftaran & Manajemen Terapis</h3>
+                        <div style="background: #f0fff4; padding: 12px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 15px;">
+                            <div class="form-group">
+                                <label>Nama Lengkap Terapis:</label>
+                                <input type="text" id="new-therapist-name" placeholder="Misal: Ratna Sari">
+                            </div>
+                            <div class="form-group">
+                                <label>Nomor Kontak / WhatsApp:</label>
+                                <input type="text" id="new-therapist-phone" placeholder="08123456789">
+                            </div>
+                            <div class="form-group">
+                                <label>Spesialisasi Keahlian:</label>
+                                <input type="text" id="new-therapist-skill" placeholder="Tradisionil, Balinese">
+                            </div>
+                            <button class="btn btn-success" style="width: 100%; margin-top: 5px;" onclick="registerTherapist()">Daftarkan Terapis Baru</button>
+                        </div>
+
+                        <h4 style="font-size: 0.85rem; color: var(--primary); margin-bottom: 8px;">Daftar Terapis Aktif:</h4>
+                        <div class="table-responsive">
+                            <table>
+                               <thead>
+                                    <tr>
+                                        <th>Nama Terapis</th>
+                                        <th>Kontak</th>
+                                        <th>Spesialisasi</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="therapist-list-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card" style="border-left: 4px solid var(--accent);">
+                        <h3>🏨 Pendaftaran & Manajemen Hotel Mitra</h3>
+                        <div style="background: #f0fff4; padding: 12px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 15px;">
+                            <div class="form-group">
+                                <label>Nama Hotel Mitra:</label>
+                                <input type="text" id="new-hotel-name" placeholder="Misal: JW Marriott Surabaya">
+                            </div>
+                            <div class="form-group">
+                                <label>Lokasi / Area:</label>
+                                <input type="text" id="new-hotel-location" placeholder="Surabaya Pusat">
+                            </div>
+                            <div class="form-group">
+                                <label>Nama PIC Hotel:</label>
+                                <input type="text" id="new-hotel-pic" placeholder="Bpk. Hendra">
+                            </div>
+                            <button class="btn btn-success" style="width: 100%; margin-top: 5px;" onclick="registerHotel()">Daftarkan Hotel Mitra Baru</button>
+                        </div>
+
+                        <h4 style="font-size: 0.85rem; color: var(--primary); margin-bottom: 8px;">Daftar Hotel Mitra Aktif:</h4>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Nama Hotel</th>
+                                        <th>Lokasi</th>
+                                        <th>PIC</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="hotel-list-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: BACK OFFICE -->
+            <div id="backoffice" class="content-body">
+                <div class="card" style="border-left: 4px solid var(--danger);">
+                    <h3>⚠️ Modul Void & Pembatalan Transaksi</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Pilih transaksi aktif dari daftar di bawah untuk melakukan Void beserta alasan pembatalannya.</p>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Pilih ID Transaksi yang akan di-Void:</label>
+                            <select id="void-trx-select">
+                                <option value="TRX-001">TRX-001 | 03/06/2026 14:20 | Rp 395.000</option>
+                                <option value="TRX-002">TRX-002 | 04/06/2026 10:10 | Rp 415.000</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Alasan Pembatalan (Void):</label>
+                            <select id="void-reason-select">
+                                <option value="Salah Input Nominal Harga / Layanan">Salah Input Nominal Harga / Layanan</option>
+                                <option value="Tamu / Klien Membatalkan Pesanan">Tamu / Klien Membatalkan Pesanan</option>
+                                <option value="Kendala Mesin EDC / Sistem Pembayaran">Kendala Mesin EDC / Sistem Pembayaran</option>
+                                <option value="Duplikasi Transaksi Ganda">Duplikasi Transaksi Ganda</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Catatan Tambahan Alasan Void:</label>
+                            <input type="text" id="void-note" placeholder="Keterangan opsional mengapa transaksi dibatalkan">
+                        </div>
+                        <button class="btn btn-danger" style="margin-top: 5px; width: 100%; padding: 12px;" onclick="executeVoidTransaction()">Proses Void Transaksi Sekarang</button>
+                    </div>
+
+                    <div class="table-responsive" style="margin-top: 15px;">
+                        <h4 style="font-size: 0.85rem; color: var(--danger); margin-bottom: 8px;">Daftar Riwayat Transaksi yang Telah Di-Void:</h4>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID Trx</th>
+                                    <th>Waktu Void</th>
+                                    <th>Hotel</th>
+                                    <th>Terapis</th>
+                                    <th>Nilai Trx</th>
+                                    <th>Alasan Pembatalan (Void)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="void-history-table">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 10px;">Belum ada transaksi yang di-void.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card" style="border-left: 4px solid var(--primary);">
+                    <h3>📦 Modul Pencatatan Pembelian Barang / Stok</h3>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Nama Barang / Bahan:</label>
+                            <input type="text" id="purchase-item-name" placeholder="Misal: Essential Oil, Towel, Amenity">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Kategori:</label>
+                            <select id="purchase-category">
+                                <option value="Bahan Habis Pakai">Bahan Habis Pakai</option>
+                                <option value="Perlengkapan & Linen">Perlengkapan & Linen</option>
+                                <option value="Alat & Maintenance">Alat & Maintenance</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Total Biaya (IDR):</label>
+                            <input type="number" id="purchase-item-cost" placeholder="Contoh: 250000">
+                        </div>
+                        <button class="btn btn-success" style="margin-top: 5px; width: 100%;" onclick="recordPurchase()">Catat Pembelian</button>
+                    </div>
+
+                    <div class="table-responsive" style="margin-top: 15px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Waktu Pembelian</th>
+                                    <th>Nama Barang / Bahan</th>
+                                    <th>Kategori</th>
+                                    <th>Jumlah Biaya (IDR)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="purchase-history-table">
+                                <tr>
+                                    <td>01/06/2026 10:30</td>
+                                    <td>Essential Oil Jasmine 1L (Rituals of Mehr)</td>
+                                    <td>Bahan Habis Pakai</td>
+                                    <td>Rp 1.250.000</td>
+                                </tr>
+                                <tr>
+                                    <td>02/06/2026 14:15</td>
+                                    <td>Handuk Spa Putih Premium (12 Pcs)</td>
+                                    <td>Perlengkapan & Linen</td>
+                                    <td>Rp 840.000</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card" style="border-left: 4px solid var(--accent);">
+                    <h3>
+                        <span>🏨 Production Tiap Hotel Mitra</span>
+                        <div class="filter-container">
+                            <label style="font-size: 0.75rem; margin:0; color:var(--text-muted);">Periode:</label>
+                            <select id="filter-hotel-production-period" onchange="updateHotelProductionTable()">
+                                <option value="this_month">Bulan Ini</option>
+                                <option value="last_month">Bulan Lalu</option>
+                                <option value="all">Semua</option>
+                            </select>
+                        </div>
+                    </h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Hotel Mitra</th>
+                                    <th>Total Sesi</th>
+                                    <th>Jam Operasional</th>
+                                    <th>Gross Revenue (DPP)</th>
+                                    <th>Net Spa (50%)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hotel-production-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>
+                        <span>📈 Kinerja & Komisi Terapis</span>
+                        <div class="filter-container">
+                            <label style="font-size: 0.75rem; margin:0; color:var(--text-muted);">Periode:</label>
+                            <select id="filter-production-period" onchange="updateTherapistProductionTable()">
+                                <option value="this_month">Bulan Ini</option>
+                                <option value="last_month">Bulan Lalu</option>
+                                <option value="all">Semua</option>
+                            </select>
+                        </div>
+                    </h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nama Terapis</th>
+                                    <th>Job Selesai</th>
+                                    <th>Jam Treatment</th>
+                                    <th>Akumulasi Nilai (DPP)</th>
+                                    <th>Komisi (10%)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="therapist-production-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3><span>Riwayat Transaksi Harian</span></h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID Trx</th>
+                                    <th>Waktu</th>
+                                    <th>Hotel & Tamu (Kamar)</th>
+                                    <th>Terapis</th>
+                                    <th>Total (Inc. Pajak)</th>
+                                    <th>Net Spa (DPP 50%)</th>
+                                    <th>Catatan</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transaction-history-table">
+                                <tr id="row-TRX-001">
+                                    <td>TRX-001</td>
+                                    <td>03/06/2026 14:20</td>
+                                    <td>HARRIS Satelit<br><small style="color:var(--text-muted)">Tamu: Bpk. Andi (Kmr 302)</small></td>
+                                    <td>Siti Aminah</td>
+                                    <td>Rp 395.000</td>
+                                    <td>Rp 177.928</td>
+                                    <td>-</td>
+                                    <td><span class="badge-in">Success</span></td>
+                                </tr>
+                                <tr id="row-TRX-002">
+                                    <td>TRX-002</td>
+                                    <td>04/06/2026 10:10</td>
+                                    <td>Santika Gubeng<br><small style="color:var(--text-muted)">Tamu: Ibu Sarah (Kmr 512)</small></td>
+                                    <td>Dewi Lestari</td>
+                                    <td>Rp 415.000</td>
+                                    <td>Rp 186.937</td>
+                                    <td>Tekanan sedang</td>
+                                    <td><span class="badge-in">Success</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: DOWNLOAD REPORTS -->
+            <div id="reports" class="content-body">
+                <div class="card" style="border-left: 4px solid var(--primary); margin-bottom: 15px;">
+                    <h3>📅 Pengaturan Sortir Periode Laporan PDF</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Pilih Bulan dan Tahun sebelum mengunduh laporan.</p>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Pilih Bulan:</label>
+                            <select id="report-month-select">
+                                <option value="01">Januari</option>
+                                <option value="02">Februari</option>
+                                <option value="03">Maret</option>
+                                <option value="04">April</option>
+                                <option value="05">Mei</option>
+                                <option value="06" selected>Juni</option>
+                                <option value="07">Juli</option>
+                                <option value="08">Agustus</option>
+                                <option value="09">September</option>
+                                <option value="10">Oktober</option>
+                                <option value="11">November</option>
+                                <option value="12">Desember</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Pilih Tahun:</label>
+                            <select id="report-year-select">
+                                <option value="2026" selected>2026</option>
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-card-grid">
+                    <div class="report-box">
+                        <div>
+                            <h4>1. Report Production & Komisi Terapis</h4>
+                            <p>Rekapitulasi total sesi, jam kerja, nilai layanan, dan komisi (10%).</p>
+                        </div>
+                        <button class="btn btn-success" onclick="downloadPDF('therapist')">📥 Download PDF (Terapis)</button>
+                    </div>
+
+                    <div class="report-box">
+                        <div>
+                            <h4>2. Report Production Tiap Hotel Mitra</h4>
+                            <p>Ringkasan performa operasional dan gross revenue per hotel.</p>
+                        </div>
+                        <button class="btn btn-success" onclick="downloadPDF('hotel')">📥 Download PDF (Hotel)</button>
+                    </div>
+
+                    <div class="report-box">
+                        <div>
+                            <h4>3. Report Pengeluaran Bulanan</h4>
+                            <p>Rincian pengeluaran pembelian barang operasional.</p>
+                        </div>
+                        <button class="btn btn-success" onclick="downloadPDF('expense')">📥 Download PDF (Pengeluaran)</button>
+                    </div>
+
+                    <div class="report-box">
+                        <div>
+                            <h4>4. Report Sharing Profit & Laba Rugi</h4>
+                            <p>Pembagian laba bersih (60% Owner : 40% Partner) dan Net Spa.</p>
+                        </div>
+                        <button class="btn btn-success" onclick="downloadPDF('profit')">📥 Download PDF (Sharing Profit)</button>
+                    </div>
+
+                    <div class="report-box" style="border-left-color: var(--danger);">
+                        <div>
+                            <h4>5. Report Void & Pembatalan Trx</h4>
+                            <p>Rekapitulasi seluruh transaksi yang dibatalkan beserta alasannya.</p>
+                        </div>
+                        <button class="btn btn-warning" onclick="downloadPDF('void')">📥 Download PDF (Void)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: PROFIT & LOSS DASHBOARD -->
+            <div id="pnl" class="content-body">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                    <div class="filter-container">
+                        <label style="font-size: 0.8rem; font-weight: 600;">Periode P&L:</label>
+                        <select id="filter-pnl-period" onchange="updatePnLData()">
+                            <option value="this_month">Bulan Ini</option>
+                            <option value="last_month">Bulan Lalu</option>
+                            <option value="ytd">Tahun Ini (YTD)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid-3">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Gross Spa Revenue (DPP)</div>
+                        <div class="stat-value" id="pnl-gross-rev">Rp 28.112.613</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-label">Net Profit Manajemen AERO</div>
+                        <div class="stat-value" id="pnl-net-profit">Rp 9.839.414</div>
+                    </div>
+                    <div class="stat-card accent">
+                        <div class="stat-label">Sharing (Owner 60% : Partner 40%)</div>
+                        <div class="stat-value" id="pnl-sharing">O: 5.90Jt | P: 3.94Jt</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Laporan Laba Rugi (Profit & Loss)</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Komponen Keuangan</th>
+                                    <th>Jumlah (IDR)</th>
+                                    <th>Persentase</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pnl-table-body">
+                                <tr>
+                                    <td><strong>1. Total Pendapatan Kotor (Gross / DPP)</strong></td>
+                                    <td><strong id="pnl-t1">Rp 28.112.613</strong></td>
+                                    <td>100%</td>
+                                </tr>
+                                <tr>
+                                    <td>Dikurangi: Sharing Pihak Hotel (50%)</td>
+                                    <td id="pnl-t2">Rp 14.056.306</td>
+                                    <td>50%</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>2. Net Spa Revenue (Kas AERO)</strong></td>
+                                    <td><strong id="pnl-t3">Rp 14.056.306</strong></td>
+                                    <td><strong>50%</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>Dikurangi: Komisi Terapis (10%)</td>
+                                    <td id="pnl-t4">Rp 2.811.261</td>
+                                    <td>10%</td>
+                                </tr>
+                                <tr>
+                                    <td>Dikurangi: Biaya Operasional & Barang</td>
+                                    <td id="pnl-t5">Rp 1.405.631</td>
+                                    <td>5%</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>3. Net Profit Bersih Manajemen</strong></td>
+                                    <td><strong id="pnl-t6">Rp 9.839.414</strong></td>
+                                    <td><strong>35%</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>🔸 Hak Owner (60%)</td>
+                                    <td><strong id="pnl-t7">Rp 5.903.648</strong></td>
+                                    <td>21%</td>
+                                </tr>
+                                <tr>
+                                    <td>🔸 Hak Partner (40%)</td>
+                                    <td><strong id="pnl-t8">Rp 3.935.766</strong></td>
+                                    <td>14%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: PENGATURAN SISTEM & USER MANAGEMENT -->
+            <div id="settings" class="content-body">
+                <div class="grid-2">
+                    <div class="card" style="border-left: 4px solid var(--primary);">
+                        <h3>👤 Penambahan User & Level Akses</h3>
+                        <div style="background: #f0fff4; padding: 12px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 15px;">
+                            <div class="form-group">
+                                <label>Username:</label>
+                                <input type="text" id="new-user-name" placeholder="Contoh: terapis_siti / owner_baru">
+                            </div>
+                            <div class="form-group">
+                                <label>Password:</label>
+                                <input type="password" id="new-user-pass" placeholder="Masukkan password akun">
+                            </div>
+                            <div class="form-group">
+                                <label>Level Akses:</label>
+                                <select id="new-user-role">
+                                    <option value="terapis">Terapis (Akses POS & Absensi)</option>
+                                    <option value="owner">Owner / Management (All akses)</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-success" style="width: 100%; margin-top: 5px;" onclick="addNewSystemUser()">Simpan User Baru</button>
+                        </div>
+
+                        <h4 style="font-size: 0.85rem; color: var(--primary); margin-bottom: 8px;">Daftar User Terdaftar:</h4>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Level Akses</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="system-users-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card" style="border-left: 4px solid var(--warning);">
+                        <h3>🔒 Ubah Password Akun Aktif</h3>
+                        <div style="background: #f0fff4; padding: 12px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 15px;">
+                            <div class="form-group">
+                                <label>Username Saat Ini:</label>
+                                <input type="text" id="current-username-display" readonly style="background: #edf2f7; color: var(--text-muted);">
+                            </div>
+                            <div class="form-group">
+                                <label>Password Lama:</label>
+                                <input type="password" id="old-password" placeholder="Masukkan password lama">
+                            </div>
+                            <div class="form-group">
+                                <label>Password Baru:</label>
+                                <input type="password" id="new-password" placeholder="Masukkan password baru">
+                            </div>
+                            <button class="btn btn-warning" style="width: 100%; margin-top: 5px;" onclick="changeUserPassword()">Perbarui Password</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentCartItem = null;
+        let currentDiscountPercent = 0;
+        let transactionCount = 2;
+        let totalExtraPurchases = 1882883; 
+        let lastProcessedTransaction = null;
+
+        let activeSessionUser = {
+            username: 'ADMIN',
+            role: 'owner'
+        };
+
+        let systemUsersList = [
+            { username: 'ADMIN', pass: '1234', role: 'owner' },
+            { username: 'terapis1', pass: 'terapis123', role: 'terapis' }
+        ];
+
+        let spaCatalog = [
+            { id: "trad", name: "Traditional Massage 90 Mins", price: 395000 },
+            { id: "aroma", name: "Aromatherapy 90 Mins", price: 415000 },
+            { id: "bali", name: "Balinese Massage 90 Mins", price: 420000 },
+            { id: "stone", name: "Hot Stone Massage 90 Mins", price: 450000 }
+        ];
+
+        let therapistsList = [
+            { name: "Siti Aminah", phone: "08123456781", skill: "Traditional, Balinese" },
+            { name: "Dewi Lestari", phone: "08123456782", skill: "Aromatherapy, Hot Stone" },
+            { name: "Rina Melati", phone: "08123456783", skill: "Traditional, Reflexology" },
+            { name: "Siti Rahma", phone: "08123456784", skill: "Balinese, Deep Tissue" }
+        ];
+
+        let hotelsList = [
+            { name: "HARRIS Bundaran Satelit", location: "Surabaya Barat", pic: "Bpk. Budi" },
+            { name: "Santika Premiere Gubeng", location: "Surabaya Pusat", pic: "Ibu Siska" },
+            { name: "Best Western Papilio", location: "Surabaya Selatan", pic: "Bpk. Doni" }
+        ];
+
+        let activeTransactions = {
+            "TRX-001": { id: "TRX-001", time: "03/06/2026 14:20", hotel: "HARRIS Bundaran Satelit", therapist: "Siti Aminah", amount: 395000, dpp: 355856, tax: 39144, netSpa: 177928 },
+            "TRX-002": { id: "TRX-002", time: "04/06/2026 10:10", hotel: "Santika Premiere Gubeng", therapist: "Dewi Lestari", amount: 415000, dpp: 373874, tax: 41126, netSpa: 186937 }
+        };
+
+        let voidHistoryList = [];
+
+        let attendanceMasterData = [
+            { name: "Siti Aminah", status: "IN", dateObj: new Date(2026, 5, 4, 9, 0, 15), timeStr: "04/06/2026, 09:00:15 WIB", hotel: "HARRIS Bundaran Satelit" },
+            { name: "Dewi Lestari", status: "IN", dateObj: new Date(2026, 5, 4, 9, 15, 30), timeStr: "04/06/2026, 09:15:30 WIB", hotel: "Santika Premiere Gubeng" }
+        ];
+
+        let purchaseMasterList = [
+            { date: "01/06/2026 10:30", name: "Essential Oil Jasmine 1L (Rituals of Mehr)", category: "Bahan Habis Pakai", cost: 1250000 },
+            { date: "02/06/2026 14:15", name: "Handuk Spa Putih Premium (12 Pcs)", category: "Perlengkapan & Linen", cost: 840000 }
+        ];
+
+        let therapistDataHistory = {
+            "this_month": {
+                "Siti Aminah": { jobs: 5, hours: 7.5, revenue: 1842793 },
+                "Dewi Lestari": { jobs: 4, hours: 6.0, revenue: 1495495 },
+                "Rina Melati": { jobs: 3, hours: 4.5, revenue: 1094595 },
+                "Siti Rahma": { jobs: 2, hours: 3.0, revenue: 747748 }
+            },
+            "last_month": {
+                "Siti Aminah": { jobs: 8, hours: 12.0, revenue: 2955000 },
+                "Dewi Lestari": { jobs: 7, hours: 10.5, revenue: 2567568 },
+                "Rina Melati": { jobs: 6, hours: 9.0, revenue: 2189189 },
+                "Siti Rahma": { jobs: 5, hours: 7.5, revenue: 1846847 }
+            },
+            "all": {
+                "Siti Aminah": { jobs: 13, hours: 19.5, revenue: 4797793 },
+                "Dewi Lestari": { jobs: 11, hours: 16.5, revenue: 4063063 },
+                "Rina Melati": { jobs: 9, hours: 13.5, revenue: 3283784 },
+                "Siti Rahma": { jobs: 7, hours: 10.5, revenue: 2594595 }
+            }
+        };
+
+        let hotelDataHistory = {
+            "this_month": {
+                "HARRIS Bundaran Satelit": { sessions: 6, hours: 9.0, gross: 3202703 },
+                "Santika Premiere Gubeng": { sessions: 5, hours: 7.5, gross: 2679279 },
+                "Best Western Papilio": { sessions: 3, hours: 4.5, gross: 1608108 }
+            },
+            "last_month": {
+                "HARRIS Bundaran Satelit": { sessions: 12, hours: 18.0, gross: 6405405 },
+                "Santika Premiere Gubeng": { sessions: 10, hours: 15.0, gross: 5358559 },
+                "Best Western Papilio": { sessions: 8, hours: 12.0, gross: 4288288 }
+            },
+            "all": {
+                "HARRIS Bundaran Satelit": { sessions: 18, hours: 27.0, gross: 9608108 },
+                "Santika Premiere Gubeng": { sessions: 15, hours: 22.5, gross: 8037838 },
+                "Best Western Papilio": { sessions: 11, hours: 16.5, gross: 5896396 }
+            }
+        };
+
+        window.onload = function() {
+            renderCatalogPOS();
+            renderCatalogManagementTable();
+            renderPartnersManagementTables();
+            renderSystemUsersTable();
+            updateDropdowns();
+            updateTherapistProductionTable();
+            updateHotelProductionTable();
+            updatePnLData();
+            filterAttendanceData();
+        };
+
+        setInterval(() => {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WIB';
+            const dateStr = now.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            document.getElementById('live-clock-display').innerText = `${dateStr}, ${timeStr}`;
+        }, 1000);
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar-nav');
+            sidebar.classList.toggle('mobile-open');
+        }
+
+        function handleLogin() {
+            const user = document.getElementById('username-input').value.trim();
+            const pass = document.getElementById('password-input').value.trim();
+            const foundUser = systemUsersList.find(u => u.username === user && u.pass === pass);
+
+            if (foundUser) {
+                activeSessionUser = { username: foundUser.username, role: foundUser.role };
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('app-container').style.display = 'flex';
+                applyRoleAccessUI();
+            } else {
+                alert('Username atau Password salah!');
+            }
+        }
+
+        function applyRoleAccessUI() {
+            const ownerOnlyMenus = document.querySelectorAll('.nav-owner-only');
+            const badgeEl = document.getElementById('current-user-badge');
+            
+            if (activeSessionUser.role === 'terapis') {
+                ownerOnlyMenus.forEach(el => el.style.display = 'none');
+                if (badgeEl) badgeEl.innerText = `Role: Terapis (${activeSessionUser.username})`;
+                switchTab('pos', document.getElementById('menu-pos'));
+            } else {
+                ownerOnlyMenus.forEach(el => el.style.display = 'flex');
+                if (badgeEl) badgeEl.innerText = `Role: Owner (${activeSessionUser.username})`;
+                switchTab('pos', document.getElementById('menu-pos'));
+            }
+            const currentUsrDisplay = document.getElementById('current-username-display');
+            if (currentUsrDisplay) currentUsrDisplay.value = activeSessionUser.username;
+        }
+
+        function handleLogout() {
+            document.getElementById('username-input').value = '';
+            document.getElementById('password-input').value = '';
+            document.getElementById('app-container').style.display = 'none';
+            document.getElementById('login-container').style.display = 'flex';
+        }
+
+        function switchTab(tabId, element) {
+            if (activeSessionUser.role === 'terapis' && tabId !== 'pos' && tabId !== 'attendance') {
+                alert('Akses ditolak! Level Terapis hanya diizinkan untuk Kasir POS dan Absensi.');
+                return;
+            }
+            document.querySelectorAll('.content-body').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-links li').forEach(el => el.classList.remove('active'));
+
+            const targetTab = document.getElementById(tabId);
+            if (targetTab) targetTab.classList.add('active');
+            if (element) element.classList.add('active');
+
+            if (window.innerWidth <= 900) {
+                document.getElementById('sidebar-nav').classList.remove('mobile-open');
+            }
+
+            const titles = {
+                'pos': 'Sistem Kasir POS',
+                'attendance': 'Absensi Kehadiran Terapis',
+                'catalog': 'Manajemen Katalog SPA & Harga',
+                'partners': 'Manajemen Mitra (Terapis & Hotel)',
+                'backoffice': 'Back Office & Operasional',
+                'reports': 'Download Report PDF',
+                'pnl': 'Profit & Loss Dashboard',
+                'settings': 'Pengaturan Sistem & User'
+            };
+            const titleEl = document.getElementById('page-title');
+            if (titleEl && titles[tabId]) titleEl.innerText = titles[tabId];
+        }
+
+        function renderSystemUsersTable() {
+            const tbody = document.getElementById('system-users-table');
+            if (!tbody) return;
+            let html = '';
+            systemUsersList.forEach((u, index) => {
+                let roleBadge = u.role === 'owner' ? '<span class="badge-in">Owner</span>' : '<span class="badge-void">Terapis</span>';
+                html += `<tr><td><strong>${u.username}</strong></td><td>${roleBadge}</td><td>${u.username !== 'ADMIN' ? `<button class="btn btn-danger btn-sm" onclick="removeSystemUser(${index})">Hapus</button>` : '-'}</td></tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function addNewSystemUser() {
+            const username = document.getElementById('new-user-name').value.trim();
+            const pass = document.getElementById('new-user-pass').value.trim();
+            const role = document.getElementById('new-user-role').value;
+            if (!username || !pass) return alert('Username dan Password wajib diisi!');
+            if (systemUsersList.some(u => u.username === username)) return alert('Username sudah terdaftar!');
+            systemUsersList.push({ username, pass, role });
+            document.getElementById('new-user-name').value = '';
+            document.getElementById('new-user-pass').value = '';
+            renderSystemUsersTable();
+            alert(`User "${username}" berhasil ditambahkan!`);
+        }
+
+        function removeSystemUser(index) {
+            if (systemUsersList[index].username === 'ADMIN') return alert('Admin utama tidak dapat dihapus.');
+            if (confirm('Yakin ingin menghapus user ini?')) {
+                systemUsersList.splice(index, 1);
+                renderSystemUsersTable();
+            }
+        }
+
+        function changeUserPassword() {
+            const oldPass = document.getElementById('old-password').value.trim();
+            const newPass = document.getElementById('new-password').value.trim();
+            const currentUserObj = systemUsersList.find(u => u.username === activeSessionUser.username);
+            if (!currentUserObj || currentUserObj.pass !== oldPass) return alert('Password lama salah!');
+            currentUserObj.pass = newPass;
+            document.getElementById('old-password').value = '';
+            document.getElementById('new-password').value = '';
+            alert('Password berhasil diperbarui!');
+        }
+
+        function renderCatalogPOS() {
+            const container = document.getElementById('pos-catalog-container');
+            if (!container) return;
+            let html = '';
+            spaCatalog.forEach((item, index) => {
+                let shortName = item.name.replace(' Mins', "'").replace('Massage', '');
+                html += `
+                    <div class="item-box">
+                        <div>
+                            <div class="item-name">${shortName}</div>
+                            <div class="item-price">Rp ${item.price.toLocaleString('id-ID')} <small style="font-size:0.65rem; color:var(--text-muted); display:block;">(Inc. Pajak)</small></div>
+                        </div>
+                        <div class="item-action">
+                            <input type="number" id="qty-item-${index}" value="1" min="1" max="10">
+                            <button class="btn btn-sm" onclick="addToCart('${item.name}', ${item.price}, 'qty-item-${index}')">+</button>
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderCatalogManagementTable() {
+            const tbody = document.getElementById('catalog-management-table');
+            if (!tbody) return;
+            let html = '';
+            spaCatalog.forEach((item, index) => {
+                html += `<tr><td><strong>${item.name}</strong></td><td>Rp ${item.price.toLocaleString('id-ID')}</td><td><div style="display: flex; gap: 5px; align-items: center;"><input type="number" id="edit-price-${index}" value="${item.price}" style="width: 90px; padding: 6px;"><button class="btn btn-sm" onclick="updateSpaPrice(${index})">Ubah</button><button class="btn btn-danger btn-sm" onclick="removeSpaCatalogItem(${index})">Hapus</button></div></td></tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function addSpaCatalogItem() {
+            const name = document.getElementById('new-spa-name').value.trim();
+            const price = parseFloat(document.getElementById('new-spa-price').value);
+            if (!name || isNaN(price) || price <= 0) return alert('Masukkan nama dan harga valid!');
+            spaCatalog.push({ id: 'spa_' + Date.now(), name, price });
+            document.getElementById('new-spa-name').value = '';
+            document.getElementById('new-spa-price').value = '';
+            renderCatalogPOS();
+            renderCatalogManagementTable();
+            alert('Layanan baru berhasil ditambahkan!');
+        }
+
+        function updateSpaPrice(index) {
+            const newPrice = parseFloat(document.getElementById(`edit-price-${index}`).value);
+            if (isNaN(newPrice) || newPrice <= 0) return alert('Harga tidak valid!');
+            spaCatalog[index].price = newPrice;
+            renderCatalogPOS();
+            renderCatalogManagementTable();
+            alert('Harga berhasil diperbarui!');
+        }
+
+        function removeSpaCatalogItem(index) {
+            if (spaCatalog.length <= 1) return alert('Katalog minimal harus ada 1.');
+            spaCatalog.splice(index, 1);
+            renderCatalogPOS();
+            renderCatalogManagementTable();
+        }
+
+        function renderPartnersManagementTables() {
+            const tBody = document.getElementById('therapist-list-table');
+            if (tBody) {
+                let html = '';
+                therapistsList.forEach((t, index) => {
+                    html += `<tr><td><strong>${t.name}</strong></td><td>${t.phone}</td><td>${t.skill}</td><td><button class="btn btn-danger btn-sm" onclick="removeTherapist(${index})">Hapus</button></td></tr>`;
+                });
+                tBody.innerHTML = html;
+            }
+            const hBody = document.getElementById('hotel-list-table');
+            if (hBody) {
+                let html = '';
+                hotelsList.forEach((h, index) => {
+                    html += `<tr><td><strong>${h.name}</strong></td><td>${h.location}</td><td>${h.pic}</td><td><button class="btn btn-danger btn-sm" onclick="removeHotel(${index})">Hapus</button></td></tr>`;
+                });
+                hBody.innerHTML = html;
+            }
+            updateDropdowns();
+        }
+
+        function updateDropdowns() {
+            ['hotel-partner', 'attendance-hotel'].forEach(id => {
+                const sel = document.getElementById(id);
+                if (sel) {
+                    let cur = sel.value;
+                    sel.innerHTML = hotelsList.map(h => `<option value="${h.name}">${h.name}</option>`).join('');
+                    if (cur) sel.value = cur;
+                }
+            });
+            ['assigned-therapist', 'attendance-therapist'].forEach(id => {
+                const sel = document.getElementById(id);
+                if (sel) {
+                    let cur = sel.value;
+                    sel.innerHTML = therapistsList.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
+                    if (cur) sel.value = cur;
+                }
+            });
+        }
+
+        function registerTherapist() {
+            const name = document.getElementById('new-therapist-name').value.trim();
+            const phone = document.getElementById('new-therapist-phone').value.trim();
+            const skill = document.getElementById('new-therapist-skill').value.trim();
+            if (!name) return alert('Nama terapis wajib diisi!');
+            therapistsList.push({ name, phone: phone || '-', skill: skill || 'General' });
+            document.getElementById('new-therapist-name').value = '';
+            document.getElementById('new-therapist-phone').value = '';
+            document.getElementById('new-therapist-skill').value = '';
+            renderPartnersManagementTables();
+            updateTherapistProductionTable();
+            alert('Terapis berhasil didaftarkan!');
+        }
+
+        function removeTherapist(index) {
+            if (therapistsList.length <= 1) return alert('Minimal 1 terapis.');
+            therapistsList.splice(index, 1);
+            renderPartnersManagementTables();
+            updateTherapistProductionTable();
+        }
+
+        function registerHotel() {
+            const name = document.getElementById('new-hotel-name').value.trim();
+            const location = document.getElementById('new-hotel-location').value.trim();
+            const pic = document.getElementById('new-hotel-pic').value.trim();
+            if (!name) return alert('Nama hotel wajib diisi!');
+            hotelsList.push({ name, location: location || 'Surabaya', pic: pic || 'Management' });
+            document.getElementById('new-hotel-name').value = '';
+            document.getElementById('new-hotel-location').value = '';
+            document.getElementById('new-hotel-pic').value = '';
+            renderPartnersManagementTables();
+            updateHotelProductionTable();
+            alert('Hotel mitra berhasil didaftarkan!');
+        }
+
+        function removeHotel(index) {
+            if (hotelsList.length <= 1) return alert('Minimal 1 hotel.');
+            hotelsList.splice(index, 1);
+            renderPartnersManagementTables();
+            updateHotelProductionTable();
+        }
+
+        function setDiscount(percent, btnElement) {
+            currentDiscountPercent = percent;
+            document.querySelectorAll('.btn-disc').forEach(b => b.classList.remove('active'));
+            if (btnElement) btnElement.classList.add('active');
+            const customInput = document.getElementById('custom-disc-input');
+            if (customInput) customInput.value = '';
+            if (currentCartItem) renderCartSummary();
+        }
+
+        function applyCustomDiscount(val) {
+            let num = parseFloat(val) || 0;
+            if (num > 50) num = 50;
+            currentDiscountPercent = num;
+            if (currentCartItem) renderCartSummary();
+        }
+
+        function addToCart(name, price, qtyInputId) {
+            const qty = parseInt(document.getElementById(qtyInputId).value) || 1;
+            currentCartItem = { name, price, qty };
+            renderCartSummary();
+        }
+
+        function renderCartSummary() {
+            if (!currentCartItem) return;
+            const subtotal = currentCartItem.price * currentCartItem.qty;
+            const discAmount = subtotal * (currentDiscountPercent / 100);
+            const final = subtotal - discAmount;
+            const dpp = final / 1.11;
+            const tax = final - dpp;
+
+            document.getElementById('cart-summary').innerHTML = `
+                <p><strong>Layanan:</strong> ${currentCartItem.name} (${currentCartItem.qty}x)</p>
+                <p>Subtotal: Rp ${subtotal.toLocaleString('id-ID')}</p>
+                ${currentDiscountPercent > 0 ? `<p style="color:var(--warning)">Diskon (${currentDiscountPercent}%): -Rp ${discAmount.toLocaleString('id-ID', {maximumFractionDigits:0})}</p>` : ''}
+                <p>DPP: Rp ${dpp.toLocaleString('id-ID', {maximumFractionDigits:0})} | PPN 11%: Rp ${tax.toLocaleString('id-ID', {maximumFractionDigits:0})}</p>
+                <p style="color:var(--primary); font-weight:bold; margin-top:4px;">Total Tagihan: Rp ${final.toLocaleString('id-ID', {maximumFractionDigits:0})}</p>
+            `;
+        }
+
+        function processTransaction() {
+            if (!currentCartItem) return alert('Pilih layanan terlebih dahulu!');
+            const hotel = document.getElementById('hotel-partner').value;
+            const therapist = document.getElementById('assigned-therapist').value;
+            const guestName = document.getElementById('guest-name').value.trim() || 'Tamu Umum';
+            const roomNumber = document.getElementById('room-number').value.trim() || '-';
+            const customerWa = document.getElementById('customer-whatsapp').value.trim() || '-';
+            
+            transactionCount++;
+            const trxId = 'TRX-00' + transactionCount;
+            const subtotal = currentCartItem.price * currentCartItem.qty;
+            const discAmount = subtotal * (currentDiscountPercent / 100);
+            const final = subtotal - discAmount;
+            const dpp = final / 1.11;
+            const tax = final - dpp;
+            const netSpa = Math.round(dpp * 0.5);
+
+            ['this_month', 'all'].forEach(p => {
+                if (!therapistDataHistory[p][therapist]) therapistDataHistory[p][therapist] = { jobs: 0, hours: 0, revenue: 0 };
+                therapistDataHistory[p][therapist].jobs += currentCartItem.qty;
+                therapistDataHistory[p][therapist].revenue += dpp;
+
+                if (!hotelDataHistory[p][hotel]) hotelDataHistory[p][hotel] = { sessions: 0, hours: 0, gross: 0 };
+                hotelDataHistory[p][hotel].sessions += currentCartItem.qty;
+                hotelDataHistory[p][hotel].gross += dpp;
+            });
+
+            const now = new Date();
+            const timeStr = now.toLocaleDateString('id-ID') + ' ' + now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+
+            activeTransactions[trxId] = { id: trxId, time: timeStr, hotel, therapist, amount: final, dpp, tax, netSpa };
+            lastProcessedTransaction = { id: trxId, time: timeStr, hotel, therapist, guestName, roomNumber, customerWa, itemName: currentCartItem.name, qty: currentCartItem.qty, subtotal, discountPercent: currentDiscountPercent, discountAmount: discAmount, dpp, taxAmount: tax, amount: final };
+
+            const voidSelect = document.getElementById('void-trx-select');
+            if (voidSelect) {
+                let opt = document.createElement('option');
+                opt.value = trxId;
+                opt.text = `${trxId} | ${timeStr} | Rp ${final.toLocaleString('id-ID')}`;
+                voidSelect.appendChild(opt);
+            }
+
+            updateTherapistProductionTable();
+            updateHotelProductionTable();
+            updatePnLData();
+
+            const tbody = document.getElementById('transaction-history-table');
+            if (tbody) {
+                const tr = document.createElement('tr');
+                tr.id = `row-${trxId}`;
+                tr.innerHTML = `<td>${trxId}</td><td>${timeStr}</td><td>${hotel}<br><small>Tamu: ${guestName} (${roomNumber})</small></td><td>${therapist}</td><td>Rp ${final.toLocaleString('id-ID')}</td><td>Rp ${netSpa.toLocaleString('id-ID')}</td><td>-</td><td><span class="badge-in">Success</span></td>`;
+                tbody.prepend(tr);
+            }
+
+            alert(`Transaksi ${trxId} berhasil diproses!`);
+            currentCartItem = null;
+            setDiscount(0, document.getElementById('disc-0'));
+            document.getElementById('guest-name').value = '';
+            document.getElementById('room-number').value = '';
+            document.getElementById('customer-whatsapp').value = '';
+            document.getElementById('order-notes').value = '';
+            document.getElementById('cart-summary').innerHTML = '<p style="color: #718096;">Belum ada layanan dipilih.</p>';
+        }
+
+        function downloadLastBillPDF() {
+            if (!lastProcessedTransaction) return alert('Belum ada transaksi untuk diunduh.');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: [80, 160] });
+            doc.setFontSize(11);
+            doc.text("AERO SPA RECEIPT", 40, 10, { align: 'center' });
+            doc.setFontSize(8);
+            doc.text(`Hotel: ${lastProcessedTransaction.hotel}`, 5, 17);
+            doc.text(`Trx ID: ${lastProcessedTransaction.id}`, 5, 22);
+            doc.text(`Waktu: ${lastProcessedTransaction.time}`, 5, 27);
+            doc.text(`Tamu: ${lastProcessedTransaction.guestName} (${lastProcessedTransaction.roomNumber})`, 5, 32);
+            doc.text(`Terapis: ${lastProcessedTransaction.therapist}`, 5, 37);
+            doc.text(`Layanan: ${lastProcessedTransaction.itemName} (${lastProcessedTransaction.qty}x)`, 5, 45);
+            doc.text(`Total: Rp ${lastProcessedTransaction.amount.toLocaleString('id-ID', {maximumFractionDigits:0})}`, 5, 55);
+            doc.save(`Receipt_${lastProcessedTransaction.id}.pdf`);
+        }
+
+        function sendBillToWhatsApp() {
+            const wa = document.getElementById('customer-whatsapp').value.trim();
+            if (!wa || !lastProcessedTransaction) return alert('Masukkan nomor WhatsApp dan pastikan ada transaksi terbaru!');
+            let phone = wa.replace(/[^0-9]/g, '');
+            if (phone.startsWith('0')) phone = '62' + phone.slice(1);
+            let msg = `Halo ${lastProcessedTransaction.guestName}, rincian tagihan AERO SPA (${lastProcessedTransaction.id}): Total Rp ${lastProcessedTransaction.amount.toLocaleString('id-ID', {maximumFractionDigits:0})}. Terima kasih!`;
+            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        function executeVoidTransaction() {
+            const trxId = document.getElementById('void-trx-select').value;
+            if (!activeTransactions[trxId]) return alert('Transaksi tidak valid.');
+            const t = activeTransactions[trxId];
+            voidHistoryList.unshift({ id: t.id, time: new Date().toLocaleTimeString(), hotel: t.hotel, therapist: t.therapist, amount: t.amount, reason: document.getElementById('void-reason-select').value });
+            delete activeTransactions[trxId];
+            alert(`Transaksi ${trxId} berhasil di-Void.`);
+        }
+
+        function recordPurchase() {
+            const name = document.getElementById('purchase-item-name').value.trim();
+            const cost = parseFloat(document.getElementById('purchase-item-cost').value);
+            if (!name || isNaN(cost)) return alert('Isi data dengan benar!');
+            totalExtraPurchases += cost;
+            document.getElementById('purchase-item-name').value = '';
+            document.getElementById('purchase-item-cost').value = '';
+            alert('Pembelian berhasil dicatat!');
+        }
+
+        function updateHotelProductionTable() {
+            const p = document.getElementById('filter-hotel-production-period').value;
+            const tbody = document.getElementById('hotel-production-table');
+            if (!tbody) return;
+            tbody.innerHTML = Object.entries(hotelDataHistory[p] || {}).map(([h, d]) => `<tr><td><strong>${h}</strong></td><td>${d.sessions} Sesi</td><td>${d.hours || 0} Jam</td><td>Rp ${Math.round(d.gross).toLocaleString('id-ID')}</td><td style="color:var(--success)">Rp ${Math.round(d.gross * 0.5).toLocaleString('id-ID')}</td></tr>`).join('');
+        }
+
+        function updateTherapistProductionTable() {
+            const p = document.getElementById('filter-production-period').value;
+            const tbody = document.getElementById('therapist-production-table');
+            if (!tbody) return;
+            tbody.innerHTML = Object.entries(therapistDataHistory[p] || {}).map(([name, d]) => `<tr><td><strong>${name}</strong></td><td>${d.jobs} Sesi</td><td>${d.hours || 0} Jam</td><td>Rp ${Math.round(d.revenue).toLocaleString('id-ID')}</td><td style="color:var(--success)">Rp ${Math.round(d.revenue * 0.1).toLocaleString('id-ID')}</td></tr>`).join('');
+        }
+
+        function recordAttendance(type) {
+            const name = document.getElementById('attendance-therapist').value;
+            const hotel = document.getElementById('attendance-hotel').value;
+            attendanceMasterData.unshift({ name, status: type, dateObj: new Date(), timeStr: new Date().toLocaleString(), hotel });
+            filterAttendanceData();
+            alert(`Absensi ${type} tercatat.`);
+        }
+
+        function filterAttendanceData() {
+            const tbody = document.getElementById('attendance-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = attendanceMasterData.map(a => `<tr><td>${a.name}</td><td><span class="${a.status==='IN'?'badge-in':'badge-out'}">${a.status}</span></td><td>${a.timeStr}</td><td>${a.hotel}</td></tr>`).join('');
+        }
+
+        function resetAttendanceFilter() { filterAttendanceData(); }
+
+        function updatePnLData() {
+            const baseGross = 28112613;
+            const netProfit = baseGross * 0.35;
+            document.getElementById('pnl-gross-rev').innerText = 'Rp ' + Math.round(baseGross).toLocaleString('id-ID');
+            document.getElementById('pnl-net-profit').innerText = 'Rp ' + Math.round(netProfit).toLocaleString('id-ID');
+        }
+
+        function downloadPDF(type) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text(`AERO SPA Report - ${type.toUpperCase()}`, 14, 20);
+            doc.save(`AERO_SPA_Report_${type}.pdf`);
+        }
+    </script>
+</body>
+</html>
